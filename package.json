@@ -1,0 +1,13 @@
+{
+  "name": "rn-upgrade-checker",
+  "version": "0.1.0",
+  "description": "CLI stub for React Native upgrade engine checks",
+  "bin": {
+    "rn-upgrade-checker": "bin/rn-upgrade-checker.js"
+  },
+  "main": "lib/checks.js",
+  "scripts": {
+    "check": "node bin/rn-upgrade-checker.js examples/sample-app/package.json"
+  },
+  "license": "MIT"
+}

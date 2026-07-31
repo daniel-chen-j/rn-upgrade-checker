@@ -1,13 +1,11 @@
 # rn-upgrade-checker
 
-A lightweight checker for common React Native upgrade blockers.
+CLI stub that checks `engines.node` and whether `react-native` is present.
 
-## What this repo is for
+## Usage
 
-- Detect config and dependency mismatches early
-- Flag common upgrade risks in CI
-- Provide clear guidance for next steps
-
-## Scope
-
-This initial version defines the project goal and will be expanded with practical rule checks.
+```bash
+node bin/rn-upgrade-checker.js path/to/package.json
+# or
+npx rn-upgrade-checker examples/sample-app/package.json
+```
