@@ -1,6 +1,6 @@
 # rn-upgrade-checker
 
-CLI stub that checks `engines.node` and whether `react-native` is present.
+CLI that checks Node engines, React Native presence, and React/RN version pairing.
 
 ## Usage
 
