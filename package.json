@@ -7,7 +7,8 @@
   },
   "main": "lib/checks.js",
   "scripts": {
-    "check": "node bin/rn-upgrade-checker.js examples/sample-app/package.json"
+    "check": "node bin/rn-upgrade-checker.js examples/sample-app/package.json",
+    "selftest": "node scripts/selftest.js"
   },
   "license": "MIT"
 }

@@ -1,6 +1,6 @@
 # rn-upgrade-checker
 
-CLI that checks Node engines, React Native presence, React/RN version pairing, and prints upgrade hints.
+CLI that checks Node engines, React Native presence, React/RN version pairing, flags known deprecated RN community packages, and prints upgrade hints.
 
 ## Usage
 
