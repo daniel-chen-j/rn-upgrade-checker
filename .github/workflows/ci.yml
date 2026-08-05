@@ -14,5 +14,7 @@ jobs:
           node-version: "20"
       - name: Run upgrade checker on sample app
         run: node bin/rn-upgrade-checker.js examples/sample-app/package.json
+      - name: Run upgrade checker JSON report smoke
+        run: node bin/rn-upgrade-checker.js --format json examples/sample-app/package.json
       - name: Run selftest
         run: npm run selftest
