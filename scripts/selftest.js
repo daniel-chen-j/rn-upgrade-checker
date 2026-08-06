@@ -150,4 +150,30 @@ assert.equal(cliJson.ok, true);
 assert.equal(cliJson.pairing.ok, true);
 console.log("ok: CLI --format json works");
 
+function runCliExitCode(args) {
+  try {
+    execSync(`node ${cliPath} ${args}`, { encoding: "utf8", stdio: "pipe" });
+    return 0;
+  } catch (err) {
+    return err.status;
+  }
+}
+
+const samplePathArg = samplePath;
+const legacyPath = path.join(__dirname, "..", "examples", "legacy-app", "package.json");
+
+assert.equal(runCliExitCode(samplePathArg), 0, "sample-app CLI should exit 0");
+assert.equal(runCliExitCode(legacyPath), 1, "legacy-app CLI should exit 1");
+assert.equal(
+  runCliExitCode(`--format json ${samplePathArg}`),
+  0,
+  "sample-app JSON CLI should exit 0"
+);
+assert.equal(
+  runCliExitCode(`--format json ${legacyPath}`),
+  1,
+  "legacy-app JSON CLI should exit 1"
+);
+console.log("ok: CLI exit codes are stable");
+
 console.log("all selftests passed");

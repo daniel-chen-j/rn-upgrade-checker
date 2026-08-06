@@ -14,6 +14,8 @@ Human-readable output is the default. Use `--format json` or set `RN_UPGRADE_CHE
 
 Output includes hard `issues` (exit non-zero) and advisory `hints` (informational).
 
+The CLI exits `0` when all checks pass and `1` when any issue is found (engines, pairing, deprecated packages). Hints alone do not change the exit code.
+
 ## CI
 
 GitHub Actions runs the checker against `examples/sample-app/package.json` on every push and pull request.
