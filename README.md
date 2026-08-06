@@ -12,7 +12,11 @@ npx rn-upgrade-checker examples/sample-app/package.json
 
 Human-readable output is the default. Use `--format json` or set `RN_UPGRADE_CHECKER_FORMAT=json` for machine-readable CI reports.
 
+Hints include deep links to the [React Native Upgrade Helper](https://react-native-community.github.io/upgrade-helper/) when a target version can be inferred.
+
 Output includes hard `issues` (exit non-zero) and advisory `hints` (informational).
+
+The CLI exits `0` when all checks pass and `1` when any issue is found (engines, pairing, deprecated packages). Hints alone do not change the exit code.
 
 ## CI
 

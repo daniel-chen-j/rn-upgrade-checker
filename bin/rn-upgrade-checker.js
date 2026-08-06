@@ -4,6 +4,7 @@
 const fs = require("fs");
 const path = require("path");
 const { checkPackage } = require("../lib/checks");
+const { resolveExitCode } = require("../lib/exit-codes");
 const { buildReport, formatHuman, formatJson } = require("../lib/report");
 
 function parseArgs(argv) {
@@ -37,4 +38,4 @@ if (format === "json") {
   console.log(formatHuman(report));
 }
 
-process.exit(report.ok ? 0 : 1);
+process.exit(resolveExitCode(report));
