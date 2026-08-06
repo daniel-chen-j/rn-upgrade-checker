@@ -7,6 +7,7 @@ const path = require("path");
 const { checkPackage } = require("../lib/checks");
 const { buildReport, formatJson } = require("../lib/report");
 const { deprecatedPackageIssues } = require("../lib/deprecated");
+const { upgradeHelperLink, UPGRADE_HELPER_BASE } = require("../lib/hints");
 const good = require("../examples/sample-app/package.json");
 const legacy = require("../examples/legacy-app/package.json");
 
@@ -175,5 +176,36 @@ assert.equal(
   "legacy-app JSON CLI should exit 1"
 );
 console.log("ok: CLI exit codes are stable");
+
+// Upgrade Helper deep links in hints
+const helperLink = upgradeHelperLink("0.73.0", "0.74.0");
+assert.ok(helperLink, "upgrade helper link should be built");
+assert.ok(
+  helperLink.startsWith(UPGRADE_HELPER_BASE),
+  "link should use upgrade helper base URL"
+);
+assert.ok(
+  helperLink.includes("from=0.73.0") && helperLink.includes("to=0.74.0"),
+  "link should include from/to query params"
+);
+assert.ok(
+  goodResult.hints.some((h) => h.includes(UPGRADE_HELPER_BASE)),
+  "sample-app hints should include upgrade helper link"
+);
+const humanOutput = execSync(`node ${cliPath} ${samplePathArg}`, {
+  encoding: "utf8",
+});
+assert.ok(
+  humanOutput.includes(UPGRADE_HELPER_BASE),
+  "human output should include upgrade helper link"
+);
+const jsonWithLink = JSON.parse(
+  execSync(`node ${cliPath} --format json ${samplePathArg}`, { encoding: "utf8" })
+);
+assert.ok(
+  jsonWithLink.hints.some((h) => h.includes(UPGRADE_HELPER_BASE)),
+  "JSON output should include upgrade helper link"
+);
+console.log("ok: upgrade helper links appear in hints");
 
 console.log("all selftests passed");
