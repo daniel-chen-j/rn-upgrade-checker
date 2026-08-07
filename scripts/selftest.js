@@ -7,6 +7,19 @@ const path = require("path");
 const { checkPackage } = require("../lib/checks");
 const { buildReport, formatJson } = require("../lib/report");
 const { deprecatedPackageIssues } = require("../lib/deprecated");
+const {
+  CODES,
+  FINDING_VERSION,
+  SEVERITY,
+  createFinding,
+  findingsMessages,
+} = require("../lib/findings");
+const {
+  findProfile,
+  loadMatrix,
+  reactMatchesProfile,
+} = require("../lib/matrix");
+const { resolvePackageJsonPath } = require("../lib/resolve-target");
 const { upgradeHelperLink, UPGRADE_HELPER_BASE } = require("../lib/hints");
 const good = require("../examples/sample-app/package.json");
 const legacy = require("../examples/legacy-app/package.json");
@@ -20,6 +33,24 @@ assert.equal(goodResult.reactNative, "0.73.0");
 assert.ok(goodResult.hints.length > 0, "sample-app should have upgrade hints");
 console.log("ok: sample-app passes all checks");
 
+// versioned finding model maps to stable issue strings
+const finding = createFinding(
+  CODES.REACT_PAIRING_MISMATCH,
+  SEVERITY.ERROR,
+  "react-native@0.73.0 usually pairs with react@18.2.x, found react@17.0.2"
+);
+assert.equal(finding.version, FINDING_VERSION);
+assert.equal(finding.code, CODES.REACT_PAIRING_MISMATCH);
+assert.equal(finding.severity, SEVERITY.ERROR);
+assert.deepEqual(findingsMessages([finding]), [finding.message]);
+assert.equal(
+  goodResult.findings.length,
+  0,
+  "sample-app should not produce findings"
+);
+assert.deepEqual(goodResult.issues, findingsMessages(goodResult.findings));
+console.log("ok: versioned finding model maps to issue strings");
+
 // legacy app should fail on deprecated async-storage
 const legacyResult = checkPackage(legacy);
 assert.equal(legacyResult.ok, false);
@@ -27,6 +58,11 @@ assert.ok(
   legacyResult.issues.some((i) => i.includes("async-storage")),
   "legacy-app should flag async-storage"
 );
+assert.ok(
+  legacyResult.findings.some((f) => f.code === CODES.DEPRECATED_PACKAGE),
+  "legacy-app findings should include deprecated package code"
+);
+assert.deepEqual(legacyResult.issues, findingsMessages(legacyResult.findings));
 console.log("ok: deprecated package detection works");
 
 // react / react-native pairing: RN 0.73 requires react 18.2.x
@@ -54,6 +90,38 @@ assert.ok(
   "correct pairing should not flag react version"
 );
 console.log("ok: correct react/rn pairing passes");
+
+// matrix profiles drive pairing checks for known RN versions
+const matrix = loadMatrix();
+const rn073Profile = findProfile(matrix, "0.73.0");
+assert.ok(rn073Profile, "matrix should include RN 0.73 profile");
+assert.equal(rn073Profile.react.major, 18);
+assert.equal(rn073Profile.react.minor, 2);
+assert.equal(reactMatchesProfile("18.2.0", rn073Profile), true);
+assert.equal(reactMatchesProfile("17.0.2", rn073Profile), false);
+
+const rn075Bad = {
+  engines: { node: ">=18" },
+  dependencies: { react: "18.2.0", "react-native": "0.75.0" },
+};
+const rn075BadResult = checkPackage(rn075Bad);
+assert.equal(rn075BadResult.ok, false);
+assert.ok(
+  rn075BadResult.findings.some((f) => f.code === CODES.REACT_PAIRING_MISMATCH),
+  "matrix should flag react mismatch for RN 0.75"
+);
+
+const rn075Good = {
+  engines: { node: ">=18" },
+  dependencies: { react: "18.3.1", "react-native": "0.75.0" },
+};
+const rn075GoodResult = checkPackage(rn075Good);
+assert.equal(rn075GoodResult.ok, true);
+assert.ok(
+  rn075GoodResult.hints.some((h) => h.includes("react@18.3.x")),
+  "matrix notes should appear in hints for RN 0.75"
+);
+console.log("ok: react native compatibility matrix works");
 
 // missing react-native should fail
 const noRn = { engines: { node: ">=18" }, dependencies: { react: "18.2.0" } };
@@ -207,5 +275,34 @@ assert.ok(
   "JSON output should include upgrade helper link"
 );
 console.log("ok: upgrade helper links appear in hints");
+
+// project directory paths resolve package.json inside the directory
+const sampleDir = path.join(__dirname, "..", "examples", "sample-app");
+const samplePackageJson = path.join(sampleDir, "package.json");
+assert.equal(
+  resolvePackageJsonPath(sampleDir),
+  samplePackageJson,
+  "directory target should resolve package.json"
+);
+assert.equal(
+  resolvePackageJsonPath(samplePackageJson),
+  samplePackageJson,
+  "package.json path should pass through"
+);
+
+const dirCliOutput = execSync(`node ${cliPath} ${sampleDir}`, {
+  encoding: "utf8",
+});
+assert.ok(
+  dirCliOutput.includes(samplePackageJson),
+  "directory CLI should report resolved package.json path"
+);
+assert.equal(runCliExitCode(sampleDir), 0, "sample-app directory CLI should exit 0");
+assert.equal(
+  runCliExitCode(`--format json ${sampleDir}`),
+  0,
+  "sample-app directory JSON CLI should exit 0"
+);
+console.log("ok: project directory paths resolve package.json");
 
 console.log("all selftests passed");

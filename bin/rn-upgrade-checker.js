@@ -6,6 +6,7 @@ const path = require("path");
 const { checkPackage } = require("../lib/checks");
 const { resolveExitCode } = require("../lib/exit-codes");
 const { buildReport, formatHuman, formatJson } = require("../lib/report");
+const { resolvePackageJsonPath } = require("../lib/resolve-target");
 
 function parseArgs(argv) {
   let format = process.env.RN_UPGRADE_CHECKER_FORMAT || "human";
@@ -21,16 +22,17 @@ function parseArgs(argv) {
   }
 
   if (!target) {
-    target = path.join(__dirname, "..", "examples", "sample-app", "package.json");
+    target = path.join(__dirname, "..", "examples", "sample-app");
   }
 
   return { format, target };
 }
 
 const { format, target } = parseArgs(process.argv);
-const pkg = JSON.parse(fs.readFileSync(target, "utf8"));
+const packageJsonPath = resolvePackageJsonPath(target);
+const pkg = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
 const result = checkPackage(pkg);
-const report = buildReport(target, pkg, result);
+const report = buildReport(packageJsonPath, pkg, result);
 
 if (format === "json") {
   console.log(formatJson(report));

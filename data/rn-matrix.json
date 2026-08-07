@@ -1,0 +1,24 @@
+{
+  "profiles": [
+    {
+      "reactNative": "0.72.0",
+      "react": { "major": 18, "minor": 2 },
+      "notes": "RN <=0.72: plan Flipper removal and confirm Hermes is the default JS engine before upgrading."
+    },
+    {
+      "reactNative": "0.73.0",
+      "react": { "major": 18, "minor": 2 },
+      "notes": "RN 0.73: next minor upgrades often touch Metro config and require matching react@18.2.x."
+    },
+    {
+      "reactNative": "0.74.0",
+      "react": { "major": 18, "minor": 2 },
+      "notes": "RN >=0.74: verify New Architecture flags and remove legacy community packages if unused."
+    },
+    {
+      "reactNative": "0.75.0",
+      "react": { "major": 18, "minor": 3 },
+      "notes": "RN 0.75: confirm react@18.3.x and review Metro and Gradle changes in the upgrade helper diff."
+    }
+  ]
+}
