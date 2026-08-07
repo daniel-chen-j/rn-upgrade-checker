@@ -14,6 +14,11 @@ const {
   createFinding,
   findingsMessages,
 } = require("../lib/findings");
+const {
+  findProfile,
+  loadMatrix,
+  reactMatchesProfile,
+} = require("../lib/matrix");
 const { upgradeHelperLink, UPGRADE_HELPER_BASE } = require("../lib/hints");
 const good = require("../examples/sample-app/package.json");
 const legacy = require("../examples/legacy-app/package.json");
@@ -84,6 +89,38 @@ assert.ok(
   "correct pairing should not flag react version"
 );
 console.log("ok: correct react/rn pairing passes");
+
+// matrix profiles drive pairing checks for known RN versions
+const matrix = loadMatrix();
+const rn073Profile = findProfile(matrix, "0.73.0");
+assert.ok(rn073Profile, "matrix should include RN 0.73 profile");
+assert.equal(rn073Profile.react.major, 18);
+assert.equal(rn073Profile.react.minor, 2);
+assert.equal(reactMatchesProfile("18.2.0", rn073Profile), true);
+assert.equal(reactMatchesProfile("17.0.2", rn073Profile), false);
+
+const rn075Bad = {
+  engines: { node: ">=18" },
+  dependencies: { react: "18.2.0", "react-native": "0.75.0" },
+};
+const rn075BadResult = checkPackage(rn075Bad);
+assert.equal(rn075BadResult.ok, false);
+assert.ok(
+  rn075BadResult.findings.some((f) => f.code === CODES.REACT_PAIRING_MISMATCH),
+  "matrix should flag react mismatch for RN 0.75"
+);
+
+const rn075Good = {
+  engines: { node: ">=18" },
+  dependencies: { react: "18.3.1", "react-native": "0.75.0" },
+};
+const rn075GoodResult = checkPackage(rn075Good);
+assert.equal(rn075GoodResult.ok, true);
+assert.ok(
+  rn075GoodResult.hints.some((h) => h.includes("react@18.3.x")),
+  "matrix notes should appear in hints for RN 0.75"
+);
+console.log("ok: react native compatibility matrix works");
 
 // missing react-native should fail
 const noRn = { engines: { node: ">=18" }, dependencies: { react: "18.2.0" } };
