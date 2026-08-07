@@ -7,6 +7,13 @@ const path = require("path");
 const { checkPackage } = require("../lib/checks");
 const { buildReport, formatJson } = require("../lib/report");
 const { deprecatedPackageIssues } = require("../lib/deprecated");
+const {
+  CODES,
+  FINDING_VERSION,
+  SEVERITY,
+  createFinding,
+  findingsMessages,
+} = require("../lib/findings");
 const { upgradeHelperLink, UPGRADE_HELPER_BASE } = require("../lib/hints");
 const good = require("../examples/sample-app/package.json");
 const legacy = require("../examples/legacy-app/package.json");
@@ -20,6 +27,24 @@ assert.equal(goodResult.reactNative, "0.73.0");
 assert.ok(goodResult.hints.length > 0, "sample-app should have upgrade hints");
 console.log("ok: sample-app passes all checks");
 
+// versioned finding model maps to stable issue strings
+const finding = createFinding(
+  CODES.REACT_PAIRING_MISMATCH,
+  SEVERITY.ERROR,
+  "react-native@0.73.0 usually pairs with react@18.2.x, found react@17.0.2"
+);
+assert.equal(finding.version, FINDING_VERSION);
+assert.equal(finding.code, CODES.REACT_PAIRING_MISMATCH);
+assert.equal(finding.severity, SEVERITY.ERROR);
+assert.deepEqual(findingsMessages([finding]), [finding.message]);
+assert.equal(
+  goodResult.findings.length,
+  0,
+  "sample-app should not produce findings"
+);
+assert.deepEqual(goodResult.issues, findingsMessages(goodResult.findings));
+console.log("ok: versioned finding model maps to issue strings");
+
 // legacy app should fail on deprecated async-storage
 const legacyResult = checkPackage(legacy);
 assert.equal(legacyResult.ok, false);
@@ -27,6 +52,11 @@ assert.ok(
   legacyResult.issues.some((i) => i.includes("async-storage")),
   "legacy-app should flag async-storage"
 );
+assert.ok(
+  legacyResult.findings.some((f) => f.code === CODES.DEPRECATED_PACKAGE),
+  "legacy-app findings should include deprecated package code"
+);
+assert.deepEqual(legacyResult.issues, findingsMessages(legacyResult.findings));
 console.log("ok: deprecated package detection works");
 
 // react / react-native pairing: RN 0.73 requires react 18.2.x
