@@ -19,6 +19,7 @@ const {
   loadMatrix,
   reactMatchesProfile,
 } = require("../lib/matrix");
+const { resolvePackageJsonPath } = require("../lib/resolve-target");
 const { upgradeHelperLink, UPGRADE_HELPER_BASE } = require("../lib/hints");
 const good = require("../examples/sample-app/package.json");
 const legacy = require("../examples/legacy-app/package.json");
@@ -274,5 +275,34 @@ assert.ok(
   "JSON output should include upgrade helper link"
 );
 console.log("ok: upgrade helper links appear in hints");
+
+// project directory paths resolve package.json inside the directory
+const sampleDir = path.join(__dirname, "..", "examples", "sample-app");
+const samplePackageJson = path.join(sampleDir, "package.json");
+assert.equal(
+  resolvePackageJsonPath(sampleDir),
+  samplePackageJson,
+  "directory target should resolve package.json"
+);
+assert.equal(
+  resolvePackageJsonPath(samplePackageJson),
+  samplePackageJson,
+  "package.json path should pass through"
+);
+
+const dirCliOutput = execSync(`node ${cliPath} ${sampleDir}`, {
+  encoding: "utf8",
+});
+assert.ok(
+  dirCliOutput.includes(samplePackageJson),
+  "directory CLI should report resolved package.json path"
+);
+assert.equal(runCliExitCode(sampleDir), 0, "sample-app directory CLI should exit 0");
+assert.equal(
+  runCliExitCode(`--format json ${sampleDir}`),
+  0,
+  "sample-app directory JSON CLI should exit 0"
+);
+console.log("ok: project directory paths resolve package.json");
 
 console.log("all selftests passed");
