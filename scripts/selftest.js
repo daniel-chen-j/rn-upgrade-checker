@@ -21,6 +21,7 @@ const {
 } = require("../lib/matrix");
 const { resolvePackageJsonPath } = require("../lib/resolve-target");
 const { upgradeHelperLink, UPGRADE_HELPER_BASE } = require("../lib/hints");
+const { resolveExitCode, shouldFail } = require("../lib/exit-codes");
 const good = require("../examples/sample-app/package.json");
 const legacy = require("../examples/legacy-app/package.json");
 
@@ -304,5 +305,44 @@ assert.equal(
   "sample-app directory JSON CLI should exit 0"
 );
 console.log("ok: project directory paths resolve package.json");
+
+// --fail-on severity filter controls exit code
+const errorFinding = createFinding(
+  CODES.REACT_NATIVE_MISSING,
+  SEVERITY.ERROR,
+  "react-native is not present"
+);
+const warningFinding = createFinding(
+  CODES.ENGINES_NODE_MISSING,
+  SEVERITY.WARNING,
+  "engines.node is not set"
+);
+const infoFinding = createFinding(
+  CODES.REACT_MISSING,
+  SEVERITY.INFO,
+  "optional react note"
+);
+
+assert.equal(shouldFail([errorFinding], "error"), true);
+assert.equal(shouldFail([warningFinding], "error"), false);
+assert.equal(shouldFail([warningFinding], "warning"), true);
+assert.equal(shouldFail([infoFinding], "warning"), false);
+assert.equal(shouldFail([infoFinding], "any"), true);
+assert.equal(shouldFail([], "any"), false);
+assert.equal(resolveExitCode([warningFinding], "error"), 0);
+assert.equal(resolveExitCode([warningFinding], "warning"), 1);
+assert.equal(resolveExitCode([infoFinding], "any"), 1);
+
+assert.equal(
+  runCliExitCode(`--fail-on error ${legacyPath}`),
+  1,
+  "legacy-app should exit 1 with --fail-on error"
+);
+assert.equal(
+  runCliExitCode(`--fail-on error ${samplePathArg}`),
+  0,
+  "sample-app should exit 0 with --fail-on error"
+);
+console.log("ok: --fail-on severity filter controls exit code");
 
 console.log("all selftests passed");
