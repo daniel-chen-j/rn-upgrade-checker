@@ -24,6 +24,8 @@ const { upgradeHelperLink, UPGRADE_HELPER_BASE } = require("../lib/hints");
 const { resolveExitCode, shouldFail } = require("../lib/exit-codes");
 const good = require("../examples/sample-app/package.json");
 const legacy = require("../examples/legacy-app/package.json");
+const expoApp = require("../examples/expo-app/package.json");
+const { detectExpoProject, expoFindings } = require("../lib/expo");
 
 // sample app should pass all checks
 const goodResult = checkPackage(good);
@@ -344,5 +346,41 @@ assert.equal(
   "sample-app should exit 0 with --fail-on error"
 );
 console.log("ok: --fail-on severity filter controls exit code");
+
+// Expo SDK detection surfaces info finding without failing default checks
+const expoDir = path.join(__dirname, "..", "examples", "expo-app");
+const expoResult = checkPackage(expoApp, { projectDir: expoDir });
+assert.equal(expoResult.ok, true, "expo-app should pass default checks");
+assert.ok(
+  expoResult.findings.some((f) => f.code === CODES.EXPO_PROJECT),
+  "expo-app should include Expo project finding"
+);
+assert.ok(
+  expoResult.issues.some((i) => i.includes("Expo project detected")),
+  "expo-app issues should mention Expo detection"
+);
+assert.equal(
+  runCliExitCode(`--fail-on error ${expoDir}`),
+  0,
+  "expo-app should exit 0 with --fail-on error"
+);
+assert.equal(
+  runCliExitCode(`--fail-on any ${expoDir}`),
+  1,
+  "expo-app should exit 1 with --fail-on any"
+);
+
+const configOnlyDir = path.join(__dirname, "..", "examples", "expo-config-only");
+const configOnlyPkg = {
+  engines: { node: ">=18" },
+  dependencies: { react: "18.2.0", "react-native": "0.73.0" },
+};
+const configOnlyResult = checkPackage(configOnlyPkg, { projectDir: configOnlyDir });
+assert.ok(
+  configOnlyResult.findings.some((f) => f.code === CODES.EXPO_PROJECT),
+  "app.config.js alone should trigger Expo detection"
+);
+assert.equal(detectExpoProject(good, sampleDir).isExpo, false);
+console.log("ok: Expo SDK detection works");
 
 console.log("all selftests passed");

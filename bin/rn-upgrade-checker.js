@@ -41,8 +41,9 @@ function parseArgs(argv) {
 
 const { format, failOn, target } = parseArgs(process.argv);
 const packageJsonPath = resolvePackageJsonPath(target);
+const projectDir = path.dirname(packageJsonPath);
 const pkg = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
-const result = checkPackage(pkg);
+const result = checkPackage(pkg, { projectDir });
 const report = buildReport(packageJsonPath, pkg, result);
 report.findings = result.findings;
 
