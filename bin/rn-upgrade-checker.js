@@ -6,7 +6,7 @@ const path = require("path");
 const { checkPackage } = require("../lib/checks");
 const { FAIL_ON_LEVELS, resolveExitCode } = require("../lib/exit-codes");
 const { findingsMessages } = require("../lib/findings");
-const { buildReport, formatHuman, formatJson } = require("../lib/report");
+const { buildReport, formatHuman, formatJson, formatSarif } = require("../lib/report");
 const { resolvePackageJsonPath } = require("../lib/resolve-target");
 
 function parseArgs(argv) {
@@ -70,6 +70,8 @@ report.findings = result.findings;
 
 if (format === "json") {
   console.log(formatJson(report));
+} else if (format === "sarif") {
+  console.log(formatSarif(report));
 } else {
   console.log(formatHuman(report));
 }

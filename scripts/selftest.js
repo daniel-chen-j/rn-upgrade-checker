@@ -5,7 +5,7 @@ const assert = require("assert");
 const { execSync } = require("child_process");
 const path = require("path");
 const { checkPackage } = require("../lib/checks");
-const { buildReport, formatJson } = require("../lib/report");
+const { buildReport, formatJson, formatSarif } = require("../lib/report");
 const { deprecatedPackageIssues } = require("../lib/deprecated");
 const {
   CODES,
@@ -515,5 +515,38 @@ assert.equal(
   "Flipper warnings should fail --fail-on warning"
 );
 console.log("ok: Flipper-related dependencies flagged");
+
+// SARIF 2.1.0 output maps findings to runs[0].results
+const legacyResultForSarif = checkPackage(legacy);
+const legacyReportForSarif = buildReport(legacyPath, legacy, legacyResultForSarif);
+legacyReportForSarif.findings = legacyResultForSarif.findings;
+const sarifParsed = JSON.parse(formatSarif(legacyReportForSarif));
+assert.equal(sarifParsed.version, "2.1.0");
+assert.ok(Array.isArray(sarifParsed.runs));
+assert.equal(sarifParsed.runs.length, 1);
+assert.ok(Array.isArray(sarifParsed.runs[0].results));
+assert.ok(sarifParsed.runs[0].results.length > 0);
+assert.equal(sarifParsed.runs[0].results[0].ruleId, CODES.DEPRECATED_PACKAGE);
+assert.equal(sarifParsed.runs[0].results[0].level, "error");
+assert.ok(sarifParsed.runs[0].results[0].message.text.includes("async-storage"));
+let sarifCliRaw;
+try {
+  sarifCliRaw = execSync(`node ${cliPath} --format sarif ${legacyPath}`, {
+    encoding: "utf8",
+  });
+} catch (err) {
+  sarifCliRaw = err.stdout;
+}
+const sarifCli = JSON.parse(sarifCliRaw);
+assert.equal(sarifCli.version, "2.1.0");
+assert.ok(sarifCli.runs[0].results.some((r) => r.ruleId === CODES.DEPRECATED_PACKAGE));
+const humanStill = execSync(`node ${cliPath} ${samplePathArg}`, { encoding: "utf8" });
+assert.ok(humanStill.includes("Summary:"), "human format unchanged");
+const jsonStill = JSON.parse(
+  execSync(`node ${cliPath} --format json ${samplePathArg}`, { encoding: "utf8" })
+);
+assert.ok(jsonStill.summary, "json summary unchanged");
+assert.equal(runCliExitCode(`--format sarif ${samplePathArg}`), 0);
+console.log("ok: SARIF report format");
 
 console.log("all selftests passed");
