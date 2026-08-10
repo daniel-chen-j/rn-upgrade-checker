@@ -477,4 +477,43 @@ assert.equal(
 );
 console.log("ok: --ignore-code filter drops matching findings");
 
+// Flipper-related dependencies are warnings (sample-app stays exit 0)
+const { flipperFindings, isFlipperPackage } = require("../lib/flipper");
+assert.equal(isFlipperPackage("react-native-flipper"), true);
+assert.equal(isFlipperPackage("flipper-plugin-network"), true);
+assert.equal(isFlipperPackage("react-native"), false);
+const flipperPkg = {
+  engines: { node: ">=18" },
+  dependencies: {
+    react: "18.2.0",
+    "react-native": "0.73.0",
+    "react-native-flipper": "0.212.0",
+    "flipper-plugin-async-storage": "1.0.0",
+  },
+};
+const flipperResult = checkPackage(flipperPkg);
+assert.equal(flipperResult.ok, true, "Flipper findings must not fail default ok");
+const flipperHits = flipperResult.findings.filter(
+  (f) => f.code === CODES.FLIPPER_DEPENDENCY
+);
+assert.equal(flipperHits.length, 2);
+assert.ok(flipperHits.every((f) => f.severity === SEVERITY.WARNING));
+assert.equal(flipperFindings(good).length, 0);
+assert.equal(
+  runCliExitCode(samplePathArg),
+  0,
+  "sample-app must stay exit 0 after Flipper check"
+);
+assert.equal(
+  resolveExitCode(flipperResult.findings, "error"),
+  0,
+  "Flipper warnings should not fail --fail-on error"
+);
+assert.equal(
+  resolveExitCode(flipperResult.findings, "warning"),
+  1,
+  "Flipper warnings should fail --fail-on warning"
+);
+console.log("ok: Flipper-related dependencies flagged");
+
 console.log("all selftests passed");
