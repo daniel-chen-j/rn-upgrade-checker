@@ -5,7 +5,7 @@ const assert = require("assert");
 const { execSync } = require("child_process");
 const path = require("path");
 const { checkPackage } = require("../lib/checks");
-const { buildReport, formatJson } = require("../lib/report");
+const { buildReport, formatJson, formatSarif } = require("../lib/report");
 const { deprecatedPackageIssues } = require("../lib/deprecated");
 const {
   CODES,
@@ -437,5 +437,116 @@ assert.ok(
 );
 assert.equal(detectExpoProject(good, sampleDir).isExpo, false);
 console.log("ok: Expo SDK detection works");
+
+// --ignore-code drops matching findings before report/exit
+assert.equal(
+  runCliExitCode(`--ignore-code dependency.deprecated ${legacyPath}`),
+  0,
+  "ignoring deprecated code should make legacy-app exit 0"
+);
+assert.equal(
+  runCliExitCode(
+    `--ignore-code dependency.deprecated --ignore-code engines.node.missing ${legacyPath}`
+  ),
+  0,
+  "repeatable --ignore-code should accept multiple codes"
+);
+assert.equal(
+  runCliExitCode(`--ignore-code expo.project.detected ${legacyPath}`),
+  1,
+  "non-matching --ignore-code should leave legacy-app failing"
+);
+const ignoredJson = JSON.parse(
+  execSync(
+    `node ${cliPath} --format json --ignore-code dependency.deprecated ${legacyPath}`,
+    { encoding: "utf8" }
+  )
+);
+assert.equal(ignoredJson.ok, true);
+assert.equal(ignoredJson.issues.length, 0);
+assert.deepEqual(ignoredJson.summary, {
+  error: 0,
+  warning: 0,
+  info: 0,
+  total: 0,
+});
+assert.equal(
+  runCliExitCode(samplePathArg),
+  0,
+  "sample-app default path should still exit 0 without ignore codes"
+);
+console.log("ok: --ignore-code filter drops matching findings");
+
+// Flipper-related dependencies are warnings (sample-app stays exit 0)
+const { flipperFindings, isFlipperPackage } = require("../lib/flipper");
+assert.equal(isFlipperPackage("react-native-flipper"), true);
+assert.equal(isFlipperPackage("flipper-plugin-network"), true);
+assert.equal(isFlipperPackage("react-native"), false);
+const flipperPkg = {
+  engines: { node: ">=18" },
+  dependencies: {
+    react: "18.2.0",
+    "react-native": "0.73.0",
+    "react-native-flipper": "0.212.0",
+    "flipper-plugin-async-storage": "1.0.0",
+  },
+};
+const flipperResult = checkPackage(flipperPkg);
+assert.equal(flipperResult.ok, true, "Flipper findings must not fail default ok");
+const flipperHits = flipperResult.findings.filter(
+  (f) => f.code === CODES.FLIPPER_DEPENDENCY
+);
+assert.equal(flipperHits.length, 2);
+assert.ok(flipperHits.every((f) => f.severity === SEVERITY.WARNING));
+assert.equal(flipperFindings(good).length, 0);
+assert.equal(
+  runCliExitCode(samplePathArg),
+  0,
+  "sample-app must stay exit 0 after Flipper check"
+);
+assert.equal(
+  resolveExitCode(flipperResult.findings, "error"),
+  0,
+  "Flipper warnings should not fail --fail-on error"
+);
+assert.equal(
+  resolveExitCode(flipperResult.findings, "warning"),
+  1,
+  "Flipper warnings should fail --fail-on warning"
+);
+console.log("ok: Flipper-related dependencies flagged");
+
+// SARIF 2.1.0 output maps findings to runs[0].results
+const legacyResultForSarif = checkPackage(legacy);
+const legacyReportForSarif = buildReport(legacyPath, legacy, legacyResultForSarif);
+legacyReportForSarif.findings = legacyResultForSarif.findings;
+const sarifParsed = JSON.parse(formatSarif(legacyReportForSarif));
+assert.equal(sarifParsed.version, "2.1.0");
+assert.ok(Array.isArray(sarifParsed.runs));
+assert.equal(sarifParsed.runs.length, 1);
+assert.ok(Array.isArray(sarifParsed.runs[0].results));
+assert.ok(sarifParsed.runs[0].results.length > 0);
+assert.equal(sarifParsed.runs[0].results[0].ruleId, CODES.DEPRECATED_PACKAGE);
+assert.equal(sarifParsed.runs[0].results[0].level, "error");
+assert.ok(sarifParsed.runs[0].results[0].message.text.includes("async-storage"));
+let sarifCliRaw;
+try {
+  sarifCliRaw = execSync(`node ${cliPath} --format sarif ${legacyPath}`, {
+    encoding: "utf8",
+  });
+} catch (err) {
+  sarifCliRaw = err.stdout;
+}
+const sarifCli = JSON.parse(sarifCliRaw);
+assert.equal(sarifCli.version, "2.1.0");
+assert.ok(sarifCli.runs[0].results.some((r) => r.ruleId === CODES.DEPRECATED_PACKAGE));
+const humanStill = execSync(`node ${cliPath} ${samplePathArg}`, { encoding: "utf8" });
+assert.ok(humanStill.includes("Summary:"), "human format unchanged");
+const jsonStill = JSON.parse(
+  execSync(`node ${cliPath} --format json ${samplePathArg}`, { encoding: "utf8" })
+);
+assert.ok(jsonStill.summary, "json summary unchanged");
+assert.equal(runCliExitCode(`--format sarif ${samplePathArg}`), 0);
+console.log("ok: SARIF report format");
 
 console.log("all selftests passed");
