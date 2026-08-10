@@ -5,6 +5,7 @@ const fs = require("fs");
 const path = require("path");
 const { checkPackage } = require("../lib/checks");
 const { FAIL_ON_LEVELS, resolveExitCode } = require("../lib/exit-codes");
+const { findingsMessages } = require("../lib/findings");
 const { buildReport, formatHuman, formatJson } = require("../lib/report");
 const { resolvePackageJsonPath } = require("../lib/resolve-target");
 
@@ -12,6 +13,7 @@ function parseArgs(argv) {
   let format = process.env.RN_UPGRADE_CHECKER_FORMAT || "human";
   let failOn = "error";
   let target = null;
+  const ignoreCodes = [];
 
   for (let i = 2; i < argv.length; i++) {
     if (argv[i] === "--format" && argv[i + 1]) {
@@ -19,6 +21,9 @@ function parseArgs(argv) {
       i++;
     } else if (argv[i] === "--fail-on" && argv[i + 1]) {
       failOn = argv[i + 1];
+      i++;
+    } else if (argv[i] === "--ignore-code" && argv[i + 1]) {
+      ignoreCodes.push(argv[i + 1]);
       i++;
     } else if (!argv[i].startsWith("-")) {
       target = argv[i];
@@ -36,14 +41,30 @@ function parseArgs(argv) {
     process.exit(2);
   }
 
-  return { format, failOn, target };
+  return { format, failOn, ignoreCodes, target };
 }
 
-const { format, failOn, target } = parseArgs(process.argv);
+/**
+ * @param {Array<{code: string}>} findings
+ * @param {string[]} ignoreCodes
+ * @returns {Array<{code: string}>}
+ */
+function filterIgnoredFindings(findings, ignoreCodes) {
+  if (!ignoreCodes || ignoreCodes.length === 0) {
+    return findings;
+  }
+  const ignored = new Set(ignoreCodes);
+  return findings.filter((finding) => !ignored.has(finding.code));
+}
+
+const { format, failOn, ignoreCodes, target } = parseArgs(process.argv);
 const packageJsonPath = resolvePackageJsonPath(target);
 const projectDir = path.dirname(packageJsonPath);
 const pkg = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
 const result = checkPackage(pkg, { projectDir });
+result.findings = filterIgnoredFindings(result.findings, ignoreCodes);
+result.issues = findingsMessages(result.findings);
+result.ok = result.findings.every((finding) => finding.severity !== "error");
 const report = buildReport(packageJsonPath, pkg, result);
 report.findings = result.findings;
 

@@ -438,4 +438,43 @@ assert.ok(
 assert.equal(detectExpoProject(good, sampleDir).isExpo, false);
 console.log("ok: Expo SDK detection works");
 
+// --ignore-code drops matching findings before report/exit
+assert.equal(
+  runCliExitCode(`--ignore-code dependency.deprecated ${legacyPath}`),
+  0,
+  "ignoring deprecated code should make legacy-app exit 0"
+);
+assert.equal(
+  runCliExitCode(
+    `--ignore-code dependency.deprecated --ignore-code engines.node.missing ${legacyPath}`
+  ),
+  0,
+  "repeatable --ignore-code should accept multiple codes"
+);
+assert.equal(
+  runCliExitCode(`--ignore-code expo.project.detected ${legacyPath}`),
+  1,
+  "non-matching --ignore-code should leave legacy-app failing"
+);
+const ignoredJson = JSON.parse(
+  execSync(
+    `node ${cliPath} --format json --ignore-code dependency.deprecated ${legacyPath}`,
+    { encoding: "utf8" }
+  )
+);
+assert.equal(ignoredJson.ok, true);
+assert.equal(ignoredJson.issues.length, 0);
+assert.deepEqual(ignoredJson.summary, {
+  error: 0,
+  warning: 0,
+  info: 0,
+  total: 0,
+});
+assert.equal(
+  runCliExitCode(samplePathArg),
+  0,
+  "sample-app default path should still exit 0 without ignore codes"
+);
+console.log("ok: --ignore-code filter drops matching findings");
+
 console.log("all selftests passed");
