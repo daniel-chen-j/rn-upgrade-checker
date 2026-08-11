@@ -549,4 +549,22 @@ assert.ok(jsonStill.summary, "json summary unchanged");
 assert.equal(runCliExitCode(`--format sarif ${samplePathArg}`), 0);
 console.log("ok: SARIF report format");
 
+// --list-codes prints sorted finding codes and skips package scan
+const listCodesOutput = execSync(`node ${cliPath} --list-codes`, {
+  encoding: "utf8",
+});
+const listedCodes = listCodesOutput.trim().split("\n").filter(Boolean);
+assert.deepEqual(
+  listedCodes,
+  Object.values(CODES).slice().sort(),
+  "--list-codes should print sorted finding codes"
+);
+assert.equal(runCliExitCode("--list-codes"), 0, "--list-codes should exit 0");
+assert.equal(
+  runCliExitCode("--list-codes /nonexistent/path/package.json"),
+  0,
+  "--list-codes should exit 0 without scanning a package path"
+);
+console.log("ok: --list-codes prints sorted codes without package scan");
+
 console.log("all selftests passed");
