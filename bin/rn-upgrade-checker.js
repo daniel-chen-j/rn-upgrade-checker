@@ -5,7 +5,7 @@ const fs = require("fs");
 const path = require("path");
 const { checkPackage } = require("../lib/checks");
 const { FAIL_ON_LEVELS, resolveExitCode } = require("../lib/exit-codes");
-const { findingsMessages } = require("../lib/findings");
+const { CODES, findingsMessages } = require("../lib/findings");
 const { buildReport, formatHuman, formatJson, formatSarif } = require("../lib/report");
 const { resolvePackageJsonPath } = require("../lib/resolve-target");
 
@@ -13,6 +13,7 @@ function parseArgs(argv) {
   let format = process.env.RN_UPGRADE_CHECKER_FORMAT || "human";
   let failOn = "error";
   let target = null;
+  let listCodes = false;
   const ignoreCodes = [];
 
   for (let i = 2; i < argv.length; i++) {
@@ -25,6 +26,8 @@ function parseArgs(argv) {
     } else if (argv[i] === "--ignore-code" && argv[i + 1]) {
       ignoreCodes.push(argv[i + 1]);
       i++;
+    } else if (argv[i] === "--list-codes") {
+      listCodes = true;
     } else if (!argv[i].startsWith("-")) {
       target = argv[i];
     }
@@ -41,7 +44,7 @@ function parseArgs(argv) {
     process.exit(2);
   }
 
-  return { format, failOn, ignoreCodes, target };
+  return { format, failOn, ignoreCodes, listCodes, target };
 }
 
 /**
@@ -57,7 +60,15 @@ function filterIgnoredFindings(findings, ignoreCodes) {
   return findings.filter((finding) => !ignored.has(finding.code));
 }
 
-const { format, failOn, ignoreCodes, target } = parseArgs(process.argv);
+const { format, failOn, ignoreCodes, listCodes, target } = parseArgs(process.argv);
+
+if (listCodes) {
+  for (const code of Object.values(CODES).sort()) {
+    console.log(code);
+  }
+  process.exit(0);
+}
+
 const packageJsonPath = resolvePackageJsonPath(target);
 const projectDir = path.dirname(packageJsonPath);
 const pkg = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));

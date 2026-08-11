@@ -151,6 +151,33 @@ assert.ok(
   rn076BadResult.findings.some((f) => f.code === CODES.REACT_PAIRING_MISMATCH),
   "bad react@18.2.0 should yield REACT_PAIRING_MISMATCH for RN 0.76"
 );
+
+const rn077Profile = findProfile(matrix, "0.77.0");
+assert.ok(rn077Profile, "matrix should include RN 0.77 profile");
+assert.equal(rn077Profile.react.major, 18);
+assert.equal(rn077Profile.react.minor, 3);
+
+const rn077Good = {
+  engines: { node: ">=18" },
+  dependencies: { react: "18.3.1", "react-native": "0.77.0" },
+};
+const rn077GoodResult = checkPackage(rn077Good);
+assert.equal(rn077GoodResult.ok, true);
+assert.ok(
+  !rn077GoodResult.findings.some((f) => f.code === CODES.REACT_PAIRING_MISMATCH),
+  "good pairing react@18.3.1 should pass for RN 0.77"
+);
+
+const rn077Bad = {
+  engines: { node: ">=18" },
+  dependencies: { react: "18.2.0", "react-native": "0.77.0" },
+};
+const rn077BadResult = checkPackage(rn077Bad);
+assert.equal(rn077BadResult.ok, false);
+assert.ok(
+  rn077BadResult.findings.some((f) => f.code === CODES.REACT_PAIRING_MISMATCH),
+  "bad react@18.2.0 should yield REACT_PAIRING_MISMATCH for RN 0.77"
+);
 console.log("ok: react native compatibility matrix works");
 
 // missing react-native should fail
@@ -548,5 +575,23 @@ const jsonStill = JSON.parse(
 assert.ok(jsonStill.summary, "json summary unchanged");
 assert.equal(runCliExitCode(`--format sarif ${samplePathArg}`), 0);
 console.log("ok: SARIF report format");
+
+// --list-codes prints sorted finding codes and skips package scan
+const listCodesOutput = execSync(`node ${cliPath} --list-codes`, {
+  encoding: "utf8",
+});
+const listedCodes = listCodesOutput.trim().split("\n").filter(Boolean);
+assert.deepEqual(
+  listedCodes,
+  Object.values(CODES).slice().sort(),
+  "--list-codes should print sorted finding codes"
+);
+assert.equal(runCliExitCode("--list-codes"), 0, "--list-codes should exit 0");
+assert.equal(
+  runCliExitCode("--list-codes /nonexistent/path/package.json"),
+  0,
+  "--list-codes should exit 0 without scanning a package path"
+);
+console.log("ok: --list-codes prints sorted codes without package scan");
 
 console.log("all selftests passed");
