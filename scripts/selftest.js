@@ -231,6 +231,42 @@ assert.ok(deprecatedIssues.some((i) => i.includes("async-storage")));
 assert.ok(deprecatedIssues.some((i) => i.includes("netinfo")));
 console.log("ok: multiple deprecated packages flagged");
 
+// community masked-view is deprecated in favor of the scoped package
+const { DEPRECATED } = require("../lib/deprecated");
+assert.equal(
+  DEPRECATED["@react-native-community/masked-view"],
+  "@react-native-masked-view/masked-view",
+  "masked-view should map to the new scoped package"
+);
+const maskedViewPkg = {
+  engines: { node: ">=18" },
+  dependencies: {
+    react: "18.2.0",
+    "react-native": "0.73.0",
+    "@react-native-community/masked-view": "0.1.11",
+  },
+};
+const maskedResult = checkPackage(maskedViewPkg);
+assert.equal(maskedResult.ok, false, "masked-view package should fail checks");
+assert.ok(
+  maskedResult.issues.some((i) => i.includes("@react-native-community/masked-view")),
+  "should flag community masked-view"
+);
+assert.ok(
+  maskedResult.issues.some((i) => i.includes("@react-native-masked-view/masked-view")),
+  "should recommend @react-native-masked-view/masked-view"
+);
+assert.ok(
+  maskedResult.findings.some((f) => f.code === CODES.DEPRECATED_PACKAGE),
+  "masked-view finding should use deprecated package code"
+);
+assert.equal(
+  checkPackage(good).ok,
+  true,
+  "sample-app should still pass without masked-view"
+);
+console.log("ok: community masked-view deprecation flagged");
+
 // JSON report output
 const jsonReport = buildReport("test/package.json", good, checkPackage(good));
 assert.equal(jsonReport.ok, true);
@@ -593,5 +629,25 @@ assert.equal(
   "--list-codes should exit 0 without scanning a package path"
 );
 console.log("ok: --list-codes prints sorted codes without package scan");
+
+// --version prints package.json version and skips package scan
+const pkgVersion = JSON.parse(
+  require("fs").readFileSync(path.join(__dirname, "..", "package.json"), "utf8")
+).version;
+const versionOutput = execSync(`node ${cliPath} --version`, {
+  encoding: "utf8",
+});
+assert.equal(
+  versionOutput.trim(),
+  pkgVersion,
+  "--version should print package.json version"
+);
+assert.equal(runCliExitCode("--version"), 0, "--version should exit 0");
+assert.equal(
+  runCliExitCode("--version /nonexistent/path/package.json"),
+  0,
+  "--version should exit 0 without scanning a package path"
+);
+console.log("ok: --version prints package version without package scan");
 
 console.log("all selftests passed");
