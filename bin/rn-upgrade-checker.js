@@ -14,6 +14,7 @@ function parseArgs(argv) {
   let failOn = "error";
   let target = null;
   let listCodes = false;
+  let showVersion = false;
   const ignoreCodes = [];
 
   for (let i = 2; i < argv.length; i++) {
@@ -28,6 +29,8 @@ function parseArgs(argv) {
       i++;
     } else if (argv[i] === "--list-codes") {
       listCodes = true;
+    } else if (argv[i] === "--version") {
+      showVersion = true;
     } else if (!argv[i].startsWith("-")) {
       target = argv[i];
     }
@@ -44,7 +47,7 @@ function parseArgs(argv) {
     process.exit(2);
   }
 
-  return { format, failOn, ignoreCodes, listCodes, target };
+  return { format, failOn, ignoreCodes, listCodes, showVersion, target };
 }
 
 /**
@@ -60,12 +63,20 @@ function filterIgnoredFindings(findings, ignoreCodes) {
   return findings.filter((finding) => !ignored.has(finding.code));
 }
 
-const { format, failOn, ignoreCodes, listCodes, target } = parseArgs(process.argv);
+const { format, failOn, ignoreCodes, listCodes, showVersion, target } = parseArgs(process.argv);
 
 if (listCodes) {
   for (const code of Object.values(CODES).sort()) {
     console.log(code);
   }
+  process.exit(0);
+}
+
+if (showVersion) {
+  const cliPkg = JSON.parse(
+    fs.readFileSync(path.join(__dirname, "..", "package.json"), "utf8")
+  );
+  console.log(cliPkg.version);
   process.exit(0);
 }
 

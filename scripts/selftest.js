@@ -594,4 +594,24 @@ assert.equal(
 );
 console.log("ok: --list-codes prints sorted codes without package scan");
 
+// --version prints package.json version and skips package scan
+const pkgVersion = JSON.parse(
+  require("fs").readFileSync(path.join(__dirname, "..", "package.json"), "utf8")
+).version;
+const versionOutput = execSync(`node ${cliPath} --version`, {
+  encoding: "utf8",
+});
+assert.equal(
+  versionOutput.trim(),
+  pkgVersion,
+  "--version should print package.json version"
+);
+assert.equal(runCliExitCode("--version"), 0, "--version should exit 0");
+assert.equal(
+  runCliExitCode("--version /nonexistent/path/package.json"),
+  0,
+  "--version should exit 0 without scanning a package path"
+);
+console.log("ok: --version prints package version without package scan");
+
 console.log("all selftests passed");
