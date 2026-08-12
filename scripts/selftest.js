@@ -231,6 +231,42 @@ assert.ok(deprecatedIssues.some((i) => i.includes("async-storage")));
 assert.ok(deprecatedIssues.some((i) => i.includes("netinfo")));
 console.log("ok: multiple deprecated packages flagged");
 
+// community masked-view is deprecated in favor of the scoped package
+const { DEPRECATED } = require("../lib/deprecated");
+assert.equal(
+  DEPRECATED["@react-native-community/masked-view"],
+  "@react-native-masked-view/masked-view",
+  "masked-view should map to the new scoped package"
+);
+const maskedViewPkg = {
+  engines: { node: ">=18" },
+  dependencies: {
+    react: "18.2.0",
+    "react-native": "0.73.0",
+    "@react-native-community/masked-view": "0.1.11",
+  },
+};
+const maskedResult = checkPackage(maskedViewPkg);
+assert.equal(maskedResult.ok, false, "masked-view package should fail checks");
+assert.ok(
+  maskedResult.issues.some((i) => i.includes("@react-native-community/masked-view")),
+  "should flag community masked-view"
+);
+assert.ok(
+  maskedResult.issues.some((i) => i.includes("@react-native-masked-view/masked-view")),
+  "should recommend @react-native-masked-view/masked-view"
+);
+assert.ok(
+  maskedResult.findings.some((f) => f.code === CODES.DEPRECATED_PACKAGE),
+  "masked-view finding should use deprecated package code"
+);
+assert.equal(
+  checkPackage(good).ok,
+  true,
+  "sample-app should still pass without masked-view"
+);
+console.log("ok: community masked-view deprecation flagged");
+
 // JSON report output
 const jsonReport = buildReport("test/package.json", good, checkPackage(good));
 assert.equal(jsonReport.ok, true);
