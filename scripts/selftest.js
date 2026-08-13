@@ -178,6 +178,33 @@ assert.ok(
   rn077BadResult.findings.some((f) => f.code === CODES.REACT_PAIRING_MISMATCH),
   "bad react@18.2.0 should yield REACT_PAIRING_MISMATCH for RN 0.77"
 );
+
+const rn078Profile = findProfile(matrix, "0.78.0");
+assert.ok(rn078Profile, "matrix should include RN 0.78 profile");
+assert.equal(rn078Profile.react.major, 18);
+assert.equal(rn078Profile.react.minor, 3);
+
+const rn078Good = {
+  engines: { node: ">=18" },
+  dependencies: { react: "18.3.1", "react-native": "0.78.0" },
+};
+const rn078GoodResult = checkPackage(rn078Good);
+assert.equal(rn078GoodResult.ok, true);
+assert.ok(
+  !rn078GoodResult.findings.some((f) => f.code === CODES.REACT_PAIRING_MISMATCH),
+  "good pairing react@18.3.1 should pass for RN 0.78"
+);
+
+const rn078Bad = {
+  engines: { node: ">=18" },
+  dependencies: { react: "18.2.0", "react-native": "0.78.0" },
+};
+const rn078BadResult = checkPackage(rn078Bad);
+assert.equal(rn078BadResult.ok, false);
+assert.ok(
+  rn078BadResult.findings.some((f) => f.code === CODES.REACT_PAIRING_MISMATCH),
+  "bad react@18.2.0 should yield REACT_PAIRING_MISMATCH for RN 0.78"
+);
 console.log("ok: react native compatibility matrix works");
 
 // missing react-native should fail
@@ -266,6 +293,41 @@ assert.equal(
   "sample-app should still pass without masked-view"
 );
 console.log("ok: community masked-view deprecation flagged");
+
+// community clipboard is deprecated in favor of the scoped package
+assert.equal(
+  DEPRECATED["@react-native-community/clipboard"],
+  "@react-native-clipboard/clipboard",
+  "clipboard should map to the new scoped package"
+);
+const clipboardPkg = {
+  engines: { node: ">=18" },
+  dependencies: {
+    react: "18.2.0",
+    "react-native": "0.73.0",
+    "@react-native-community/clipboard": "1.5.1",
+  },
+};
+const clipboardResult = checkPackage(clipboardPkg);
+assert.equal(clipboardResult.ok, false, "clipboard package should fail checks");
+assert.ok(
+  clipboardResult.issues.some((i) => i.includes("@react-native-community/clipboard")),
+  "should flag community clipboard"
+);
+assert.ok(
+  clipboardResult.issues.some((i) => i.includes("@react-native-clipboard/clipboard")),
+  "should recommend @react-native-clipboard/clipboard"
+);
+assert.ok(
+  clipboardResult.findings.some((f) => f.code === CODES.DEPRECATED_PACKAGE),
+  "clipboard finding should use deprecated package code"
+);
+assert.equal(
+  checkPackage(good).ok,
+  true,
+  "sample-app should still pass without community clipboard"
+);
+console.log("ok: community clipboard deprecation flagged");
 
 // JSON report output
 const jsonReport = buildReport("test/package.json", good, checkPackage(good));
@@ -649,5 +711,23 @@ assert.equal(
   "--version should exit 0 without scanning a package path"
 );
 console.log("ok: --version prints package version without package scan");
+
+// --list-profiles prints matrix RN versions in file order and skips package scan
+const listProfilesOutput = execSync(`node ${cliPath} --list-profiles`, {
+  encoding: "utf8",
+});
+const listedProfiles = listProfilesOutput.trim().split("\n").filter(Boolean);
+assert.deepEqual(
+  listedProfiles,
+  loadMatrix().profiles.map((profile) => profile.reactNative),
+  "--list-profiles should print reactNative versions in file order"
+);
+assert.equal(runCliExitCode("--list-profiles"), 0, "--list-profiles should exit 0");
+assert.equal(
+  runCliExitCode("--list-profiles /nonexistent/path/package.json"),
+  0,
+  "--list-profiles should exit 0 without scanning a package path"
+);
+console.log("ok: --list-profiles prints matrix versions without package scan");
 
 console.log("all selftests passed");
