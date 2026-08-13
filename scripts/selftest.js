@@ -294,6 +294,41 @@ assert.equal(
 );
 console.log("ok: community masked-view deprecation flagged");
 
+// community clipboard is deprecated in favor of the scoped package
+assert.equal(
+  DEPRECATED["@react-native-community/clipboard"],
+  "@react-native-clipboard/clipboard",
+  "clipboard should map to the new scoped package"
+);
+const clipboardPkg = {
+  engines: { node: ">=18" },
+  dependencies: {
+    react: "18.2.0",
+    "react-native": "0.73.0",
+    "@react-native-community/clipboard": "1.5.1",
+  },
+};
+const clipboardResult = checkPackage(clipboardPkg);
+assert.equal(clipboardResult.ok, false, "clipboard package should fail checks");
+assert.ok(
+  clipboardResult.issues.some((i) => i.includes("@react-native-community/clipboard")),
+  "should flag community clipboard"
+);
+assert.ok(
+  clipboardResult.issues.some((i) => i.includes("@react-native-clipboard/clipboard")),
+  "should recommend @react-native-clipboard/clipboard"
+);
+assert.ok(
+  clipboardResult.findings.some((f) => f.code === CODES.DEPRECATED_PACKAGE),
+  "clipboard finding should use deprecated package code"
+);
+assert.equal(
+  checkPackage(good).ok,
+  true,
+  "sample-app should still pass without community clipboard"
+);
+console.log("ok: community clipboard deprecation flagged");
+
 // JSON report output
 const jsonReport = buildReport("test/package.json", good, checkPackage(good));
 assert.equal(jsonReport.ok, true);
