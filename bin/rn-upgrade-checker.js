@@ -8,12 +8,14 @@ const { FAIL_ON_LEVELS, resolveExitCode } = require("../lib/exit-codes");
 const { CODES, findingsMessages } = require("../lib/findings");
 const { buildReport, formatHuman, formatJson, formatSarif } = require("../lib/report");
 const { resolvePackageJsonPath } = require("../lib/resolve-target");
+const { loadMatrix } = require("../lib/matrix");
 
 function parseArgs(argv) {
   let format = process.env.RN_UPGRADE_CHECKER_FORMAT || "human";
   let failOn = "error";
   let target = null;
   let listCodes = false;
+  let listProfiles = false;
   let showVersion = false;
   const ignoreCodes = [];
 
@@ -29,6 +31,8 @@ function parseArgs(argv) {
       i++;
     } else if (argv[i] === "--list-codes") {
       listCodes = true;
+    } else if (argv[i] === "--list-profiles") {
+      listProfiles = true;
     } else if (argv[i] === "--version") {
       showVersion = true;
     } else if (!argv[i].startsWith("-")) {
@@ -47,7 +51,7 @@ function parseArgs(argv) {
     process.exit(2);
   }
 
-  return { format, failOn, ignoreCodes, listCodes, showVersion, target };
+  return { format, failOn, ignoreCodes, listCodes, listProfiles, showVersion, target };
 }
 
 /**
@@ -63,7 +67,7 @@ function filterIgnoredFindings(findings, ignoreCodes) {
   return findings.filter((finding) => !ignored.has(finding.code));
 }
 
-const { format, failOn, ignoreCodes, listCodes, showVersion, target } = parseArgs(process.argv);
+const { format, failOn, ignoreCodes, listCodes, listProfiles, showVersion, target } = parseArgs(process.argv);
 
 if (listCodes) {
   for (const code of Object.values(CODES).sort()) {
@@ -77,6 +81,14 @@ if (showVersion) {
     fs.readFileSync(path.join(__dirname, "..", "package.json"), "utf8")
   );
   console.log(cliPkg.version);
+  process.exit(0);
+}
+
+if (listProfiles) {
+  const matrix = loadMatrix();
+  for (const profile of matrix.profiles) {
+    console.log(profile.reactNative);
+  }
   process.exit(0);
 }
 

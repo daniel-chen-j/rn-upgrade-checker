@@ -677,4 +677,22 @@ assert.equal(
 );
 console.log("ok: --version prints package version without package scan");
 
+// --list-profiles prints matrix RN versions in file order and skips package scan
+const listProfilesOutput = execSync(`node ${cliPath} --list-profiles`, {
+  encoding: "utf8",
+});
+const listedProfiles = listProfilesOutput.trim().split("\n").filter(Boolean);
+assert.deepEqual(
+  listedProfiles,
+  loadMatrix().profiles.map((profile) => profile.reactNative),
+  "--list-profiles should print reactNative versions in file order"
+);
+assert.equal(runCliExitCode("--list-profiles"), 0, "--list-profiles should exit 0");
+assert.equal(
+  runCliExitCode("--list-profiles /nonexistent/path/package.json"),
+  0,
+  "--list-profiles should exit 0 without scanning a package path"
+);
+console.log("ok: --list-profiles prints matrix versions without package scan");
+
 console.log("all selftests passed");
