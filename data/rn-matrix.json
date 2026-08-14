@@ -55,6 +55,14 @@
         "minor": 3
       },
       "notes": "RN 0.78: keep react@18.3.x and review New Architecture defaults in the upgrade helper diff."
+    },
+    {
+      "reactNative": "0.79.0",
+      "react": {
+        "major": 18,
+        "minor": 3
+      },
+      "notes": "RN 0.79: keep react@18.3.x and review New Architecture defaults in the upgrade helper diff."
     }
   ]
 }
