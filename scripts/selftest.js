@@ -418,6 +418,41 @@ assert.equal(
 );
 console.log("ok: community cameraroll deprecation flagged");
 
+// community picker is deprecated in favor of the scoped package
+assert.equal(
+  DEPRECATED["@react-native-community/picker"],
+  "@react-native-picker/picker",
+  "picker should map to the new scoped package"
+);
+const pickerPkg = {
+  engines: { node: ">=18" },
+  dependencies: {
+    react: "18.2.0",
+    "react-native": "0.73.0",
+    "@react-native-community/picker": "1.8.1",
+  },
+};
+const pickerResult = checkPackage(pickerPkg);
+assert.equal(pickerResult.ok, false, "picker package should fail checks");
+assert.ok(
+  pickerResult.issues.some((i) => i.includes("@react-native-community/picker")),
+  "should flag community picker"
+);
+assert.ok(
+  pickerResult.issues.some((i) => i.includes("@react-native-picker/picker")),
+  "should recommend @react-native-picker/picker"
+);
+assert.ok(
+  pickerResult.findings.some((f) => f.code === CODES.DEPRECATED_PACKAGE),
+  "picker finding should use deprecated package code"
+);
+assert.equal(
+  checkPackage(good).ok,
+  true,
+  "sample-app should still pass without community picker"
+);
+console.log("ok: community picker deprecation flagged");
+
 // JSON report output
 const jsonReport = buildReport("test/package.json", good, checkPackage(good));
 assert.equal(jsonReport.ok, true);
