@@ -480,6 +480,41 @@ assert.equal(
 );
 console.log("ok: community picker deprecation flagged");
 
+// community segmented-control is deprecated in favor of the scoped package
+assert.equal(
+  DEPRECATED["@react-native-community/segmented-control"],
+  "@react-native-segmented-control/segmented-control",
+  "segmented-control should map to the new scoped package"
+);
+const segmentedPkg = {
+  engines: { node: ">=18" },
+  dependencies: {
+    react: "18.2.0",
+    "react-native": "0.73.0",
+    "@react-native-community/segmented-control": "2.2.2",
+  },
+};
+const segmentedResult = checkPackage(segmentedPkg);
+assert.equal(segmentedResult.ok, false, "segmented-control package should fail checks");
+assert.ok(
+  segmentedResult.issues.some((i) => i.includes("@react-native-community/segmented-control")),
+  "should flag community segmented-control"
+);
+assert.ok(
+  segmentedResult.issues.some((i) => i.includes("@react-native-segmented-control/segmented-control")),
+  "should recommend @react-native-segmented-control/segmented-control"
+);
+assert.ok(
+  segmentedResult.findings.some((f) => f.code === CODES.DEPRECATED_PACKAGE),
+  "segmented-control finding should use deprecated package code"
+);
+assert.equal(
+  checkPackage(good).ok,
+  true,
+  "sample-app should still pass without community segmented-control"
+);
+console.log("ok: community segmented-control deprecation flagged");
+
 // JSON report output
 const jsonReport = buildReport("test/package.json", good, checkPackage(good));
 assert.equal(jsonReport.ok, true);
