@@ -259,6 +259,33 @@ assert.ok(
   rn080BadResult.findings.some((f) => f.code === CODES.REACT_PAIRING_MISMATCH),
   "bad react@18.3.1 should yield REACT_PAIRING_MISMATCH for RN 0.80"
 );
+
+const rn081Profile = findProfile(matrix, "0.81.0");
+assert.ok(rn081Profile, "matrix should include RN 0.81 profile");
+assert.equal(rn081Profile.react.major, 19);
+assert.equal(rn081Profile.react.minor, 1);
+
+const rn081Good = {
+  engines: { node: ">=18" },
+  dependencies: { react: "19.1.0", "react-native": "0.81.0" },
+};
+const rn081GoodResult = checkPackage(rn081Good);
+assert.equal(rn081GoodResult.ok, true);
+assert.ok(
+  !rn081GoodResult.findings.some((f) => f.code === CODES.REACT_PAIRING_MISMATCH),
+  "good pairing react@19.1.0 should pass for RN 0.81"
+);
+
+const rn081Bad = {
+  engines: { node: ">=18" },
+  dependencies: { react: "19.0.0", "react-native": "0.81.0" },
+};
+const rn081BadResult = checkPackage(rn081Bad);
+assert.equal(rn081BadResult.ok, false);
+assert.ok(
+  rn081BadResult.findings.some((f) => f.code === CODES.REACT_PAIRING_MISMATCH),
+  "bad react@19.0.0 should yield REACT_PAIRING_MISMATCH for RN 0.81"
+);
 console.log("ok: react native compatibility matrix works");
 
 // missing react-native should fail
@@ -452,6 +479,41 @@ assert.equal(
   "sample-app should still pass without community picker"
 );
 console.log("ok: community picker deprecation flagged");
+
+// community segmented-control is deprecated in favor of the scoped package
+assert.equal(
+  DEPRECATED["@react-native-community/segmented-control"],
+  "@react-native-segmented-control/segmented-control",
+  "segmented-control should map to the new scoped package"
+);
+const segmentedPkg = {
+  engines: { node: ">=18" },
+  dependencies: {
+    react: "18.2.0",
+    "react-native": "0.73.0",
+    "@react-native-community/segmented-control": "2.2.2",
+  },
+};
+const segmentedResult = checkPackage(segmentedPkg);
+assert.equal(segmentedResult.ok, false, "segmented-control package should fail checks");
+assert.ok(
+  segmentedResult.issues.some((i) => i.includes("@react-native-community/segmented-control")),
+  "should flag community segmented-control"
+);
+assert.ok(
+  segmentedResult.issues.some((i) => i.includes("@react-native-segmented-control/segmented-control")),
+  "should recommend @react-native-segmented-control/segmented-control"
+);
+assert.ok(
+  segmentedResult.findings.some((f) => f.code === CODES.DEPRECATED_PACKAGE),
+  "segmented-control finding should use deprecated package code"
+);
+assert.equal(
+  checkPackage(good).ok,
+  true,
+  "sample-app should still pass without community segmented-control"
+);
+console.log("ok: community segmented-control deprecation flagged");
 
 // JSON report output
 const jsonReport = buildReport("test/package.json", good, checkPackage(good));
