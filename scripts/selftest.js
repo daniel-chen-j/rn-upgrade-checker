@@ -286,6 +286,33 @@ assert.ok(
   rn081BadResult.findings.some((f) => f.code === CODES.REACT_PAIRING_MISMATCH),
   "bad react@19.0.0 should yield REACT_PAIRING_MISMATCH for RN 0.81"
 );
+
+const rn082Profile = findProfile(matrix, "0.82.0");
+assert.ok(rn082Profile, "matrix should include RN 0.82 profile");
+assert.equal(rn082Profile.react.major, 19);
+assert.equal(rn082Profile.react.minor, 1);
+
+const rn082Good = {
+  engines: { node: ">=18" },
+  dependencies: { react: "19.1.0", "react-native": "0.82.0" },
+};
+const rn082GoodResult = checkPackage(rn082Good);
+assert.equal(rn082GoodResult.ok, true);
+assert.ok(
+  !rn082GoodResult.findings.some((f) => f.code === CODES.REACT_PAIRING_MISMATCH),
+  "good pairing react@19.1.0 should pass for RN 0.82"
+);
+
+const rn082Bad = {
+  engines: { node: ">=18" },
+  dependencies: { react: "19.0.0", "react-native": "0.82.0" },
+};
+const rn082BadResult = checkPackage(rn082Bad);
+assert.equal(rn082BadResult.ok, false);
+assert.ok(
+  rn082BadResult.findings.some((f) => f.code === CODES.REACT_PAIRING_MISMATCH),
+  "bad react@19.0.0 should yield REACT_PAIRING_MISMATCH for RN 0.82"
+);
 console.log("ok: react native compatibility matrix works");
 
 // missing react-native should fail
