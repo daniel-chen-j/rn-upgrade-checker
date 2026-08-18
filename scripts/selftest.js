@@ -943,4 +943,22 @@ assert.equal(
 );
 console.log("ok: --list-profiles prints matrix versions without package scan");
 
+// --list-deprecated prints deprecated package names and skips package scan
+const listDeprecatedOutput = execSync(`node ${cliPath} --list-deprecated`, {
+  encoding: "utf8",
+});
+const listedDeprecated = listDeprecatedOutput.trim().split("\n").filter(Boolean);
+assert.deepEqual(
+  listedDeprecated,
+  Object.keys(DEPRECATED),
+  "--list-deprecated should print Object.keys(DEPRECATED)"
+);
+assert.equal(runCliExitCode("--list-deprecated"), 0, "--list-deprecated should exit 0");
+assert.equal(
+  runCliExitCode("--list-deprecated /nonexistent/path/package.json"),
+  0,
+  "--list-deprecated should exit 0 without scanning a package path"
+);
+console.log("ok: --list-deprecated prints package names without package scan");
+
 console.log("all selftests passed");
