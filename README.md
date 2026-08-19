@@ -6,11 +6,14 @@ CLI that checks Node engines, React Native presence, React/RN version pairing, f
 
 ```bash
 node bin/rn-upgrade-checker.js path/to/package.json
+node bin/rn-upgrade-checker.js --print-target path/to/project
 # or
-npx rn-upgrade-checker examples/sample-app/package.json
+npx rn-upgrade-checker --print-target examples/sample-app
 ```
 
 Human-readable output is the default. Use `--format json` or set `RN_UPGRADE_CHECKER_FORMAT=json` for machine-readable CI reports.
+
+Use `--print-target` to print the resolved `package.json` path to stderr before the report output.
 
 Hints include deep links to the [React Native Upgrade Helper](https://react-native-community.github.io/upgrade-helper/) when a target version can be inferred.
 

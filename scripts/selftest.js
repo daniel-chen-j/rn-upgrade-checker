@@ -600,6 +600,25 @@ assert.equal(cliJson.ok, true);
 assert.equal(cliJson.pairing.ok, true);
 console.log("ok: CLI --format json works");
 
+const sampleDir = path.join(__dirname, "..", "examples", "sample-app");
+const samplePackageJson = path.join(sampleDir, "package.json");
+const printTargetOutput = execSync(`node ${cliPath} --print-target ${sampleDir}`, {
+  encoding: "utf8",
+  stdio: ["ignore", "pipe", "pipe"],
+});
+assert.ok(
+  printTargetOutput.includes("Summary:"),
+  "--print-target should keep report output on stdout"
+);
+const printTargetStderr = execSync(`node ${cliPath} --print-target ${sampleDir} 2>&1 >/dev/null`, {
+  encoding: "utf8",
+});
+assert.ok(
+  printTargetStderr.includes(`Resolved target: ${samplePackageJson}`),
+  "--print-target should emit resolved package path to stderr"
+);
+console.log("ok: CLI --print-target outputs resolved package path");
+
 function runCliExitCode(args) {
   try {
     execSync(`node ${cliPath} ${args}`, { encoding: "utf8", stdio: "pipe" });
@@ -666,8 +685,6 @@ assert.ok(
 console.log("ok: upgrade helper links appear in hints");
 
 // project directory paths resolve package.json inside the directory
-const sampleDir = path.join(__dirname, "..", "examples", "sample-app");
-const samplePackageJson = path.join(sampleDir, "package.json");
 assert.equal(
   resolvePackageJsonPath(sampleDir),
   samplePackageJson,
