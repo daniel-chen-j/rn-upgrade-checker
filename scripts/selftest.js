@@ -350,6 +350,33 @@ assert.ok(
 );
 console.log("ok: missing engines.node detected");
 
+// engines.node range variants parse stable major requirements
+const nodeRangeOrPass = {
+  engines: { node: ">=40 || >=18" },
+  dependencies: { react: "18.2.0", "react-native": "0.73.0" },
+};
+const nodeRangeOrPassResult = checkPackage(nodeRangeOrPass);
+assert.equal(nodeRangeOrPassResult.ok, true, "or-range should pass when one major bound matches");
+
+const nodeRangeCaretPass = {
+  engines: { node: "^18 || ^20" },
+  dependencies: { react: "18.2.0", "react-native": "0.73.0" },
+};
+const nodeRangeCaretPassResult = checkPackage(nodeRangeCaretPass);
+assert.equal(nodeRangeCaretPassResult.ok, true, "caret ranges should parse major floor");
+
+const nodeRangeFail = {
+  engines: { node: ">=30 || >=40" },
+  dependencies: { react: "18.2.0", "react-native": "0.73.0" },
+};
+const nodeRangeFailResult = checkPackage(nodeRangeFail);
+assert.equal(nodeRangeFailResult.ok, false, "out-of-range majors should fail");
+assert.ok(
+  nodeRangeFailResult.issues.some((i) => i.includes("requires major >= 30")),
+  "out-of-range message should include parsed major floor"
+);
+console.log("ok: engines.node range variants parsed");
+
 // multiple deprecated packages
 const multiDeprecated = {
   engines: { node: ">=18" },
@@ -600,6 +627,25 @@ assert.equal(cliJson.ok, true);
 assert.equal(cliJson.pairing.ok, true);
 console.log("ok: CLI --format json works");
 
+const sampleDir = path.join(__dirname, "..", "examples", "sample-app");
+const samplePackageJson = path.join(sampleDir, "package.json");
+const printTargetOutput = execSync(`node ${cliPath} --print-target ${sampleDir}`, {
+  encoding: "utf8",
+  stdio: ["ignore", "pipe", "pipe"],
+});
+assert.ok(
+  printTargetOutput.includes("Summary:"),
+  "--print-target should keep report output on stdout"
+);
+const printTargetStderr = execSync(`node ${cliPath} --print-target ${sampleDir} 2>&1 >/dev/null`, {
+  encoding: "utf8",
+});
+assert.ok(
+  printTargetStderr.includes(`Resolved target: ${samplePackageJson}`),
+  "--print-target should emit resolved package path to stderr"
+);
+console.log("ok: CLI --print-target outputs resolved package path");
+
 function runCliExitCode(args) {
   try {
     execSync(`node ${cliPath} ${args}`, { encoding: "utf8", stdio: "pipe" });
@@ -666,8 +712,6 @@ assert.ok(
 console.log("ok: upgrade helper links appear in hints");
 
 // project directory paths resolve package.json inside the directory
-const sampleDir = path.join(__dirname, "..", "examples", "sample-app");
-const samplePackageJson = path.join(sampleDir, "package.json");
 assert.equal(
   resolvePackageJsonPath(sampleDir),
   samplePackageJson,

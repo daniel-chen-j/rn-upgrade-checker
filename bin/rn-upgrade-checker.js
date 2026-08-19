@@ -19,6 +19,7 @@ function parseArgs(argv) {
   let listProfiles = false;
   let listDeprecated = false;
   let showVersion = false;
+  let printTarget = false;
   const ignoreCodes = [];
 
   for (let i = 2; i < argv.length; i++) {
@@ -39,6 +40,8 @@ function parseArgs(argv) {
       listDeprecated = true;
     } else if (argv[i] === "--version") {
       showVersion = true;
+    } else if (argv[i] === "--print-target") {
+      printTarget = true;
     } else if (!argv[i].startsWith("-")) {
       target = argv[i];
     }
@@ -55,7 +58,7 @@ function parseArgs(argv) {
     process.exit(2);
   }
 
-  return { format, failOn, ignoreCodes, listCodes, listProfiles, listDeprecated, showVersion, target };
+  return { format, failOn, ignoreCodes, listCodes, listProfiles, listDeprecated, showVersion, printTarget, target };
 }
 
 /**
@@ -71,7 +74,7 @@ function filterIgnoredFindings(findings, ignoreCodes) {
   return findings.filter((finding) => !ignored.has(finding.code));
 }
 
-const { format, failOn, ignoreCodes, listCodes, listProfiles, listDeprecated, showVersion, target } = parseArgs(process.argv);
+const { format, failOn, ignoreCodes, listCodes, listProfiles, listDeprecated, showVersion, printTarget, target } = parseArgs(process.argv);
 
 if (listCodes) {
   for (const code of Object.values(CODES).sort()) {
@@ -104,6 +107,10 @@ if (listDeprecated) {
 }
 
 const packageJsonPath = resolvePackageJsonPath(target);
+
+if (printTarget) {
+  console.error(`Resolved target: ${packageJsonPath}`);
+}
 const projectDir = path.dirname(packageJsonPath);
 const pkg = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
 const result = checkPackage(pkg, { projectDir });
