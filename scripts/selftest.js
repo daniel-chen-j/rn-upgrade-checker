@@ -5,7 +5,7 @@ const assert = require("assert");
 const { execSync } = require("child_process");
 const path = require("path");
 const { checkPackage } = require("../lib/checks");
-const { buildReport, formatJson, formatSarif } = require("../lib/report");
+const { buildReport, countFindingsByCode, formatJson, formatSarif } = require("../lib/report");
 const { deprecatedPackageIssues } = require("../lib/deprecated");
 const {
   CODES,
@@ -1004,5 +1004,35 @@ assert.equal(
   "--list-deprecated should exit 0 without scanning a package path"
 );
 console.log("ok: --list-deprecated prints package names without package scan");
+
+
+// countFindingsByCode groups findings by code without changing report JSON shape
+assert.deepEqual(countFindingsByCode([]), {});
+assert.deepEqual(countFindingsByCode(null), {});
+assert.deepEqual(
+  countFindingsByCode([
+    { code: "dependency.deprecated", severity: "error" },
+    { code: "react.pairing", severity: "warning" },
+    { code: "dependency.deprecated", severity: "error" },
+  ]),
+  { "dependency.deprecated": 2, "react.pairing": 1 }
+);
+assert.deepEqual(
+  countFindingsByCode([{ severity: "error" }, { code: "x", severity: "info" }]),
+  { unknown: 1, x: 1 }
+);
+const shapeReport = buildReport(samplePath, good, checkPackage(good));
+const shapeBefore = Object.keys(shapeReport).sort();
+assert.deepEqual(
+  shapeBefore,
+  ["deprecated", "engines", "hints", "issues", "ok", "pairing", "summary", "target"].sort(),
+  "default report JSON keys must stay stable"
+);
+assert.equal(
+  "byCode" in shapeReport.summary,
+  false,
+  "summary must not gain byCode from helper"
+);
+console.log("ok: countFindingsByCode helper");
 
 console.log("all selftests passed");
