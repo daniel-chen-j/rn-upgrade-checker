@@ -5,7 +5,7 @@ const assert = require("assert");
 const { execSync } = require("child_process");
 const path = require("path");
 const { checkPackage } = require("../lib/checks");
-const { buildReport, formatJson, formatSarif } = require("../lib/report");
+const { buildReport, countFindingsByCode, formatHuman, formatJson, formatSarif } = require("../lib/report");
 const { deprecatedPackageIssues } = require("../lib/deprecated");
 const {
   CODES,
@@ -1004,5 +1004,66 @@ assert.equal(
   "--list-deprecated should exit 0 without scanning a package path"
 );
 console.log("ok: --list-deprecated prints package names without package scan");
+
+
+// countFindingsByCode groups findings by code without changing report JSON shape
+assert.deepEqual(countFindingsByCode([]), {});
+assert.deepEqual(countFindingsByCode(null), {});
+assert.deepEqual(
+  countFindingsByCode([
+    { code: "dependency.deprecated", severity: "error" },
+    { code: "react.pairing", severity: "warning" },
+    { code: "dependency.deprecated", severity: "error" },
+  ]),
+  { "dependency.deprecated": 2, "react.pairing": 1 }
+);
+assert.deepEqual(
+  countFindingsByCode([{ severity: "error" }, { code: "x", severity: "info" }]),
+  { unknown: 1, x: 1 }
+);
+const shapeReport = buildReport(samplePath, good, checkPackage(good));
+const shapeBefore = Object.keys(shapeReport).sort();
+assert.deepEqual(
+  shapeBefore,
+  ["deprecated", "engines", "hints", "issues", "ok", "pairing", "summary", "target"].sort(),
+  "default report JSON keys must stay stable"
+);
+assert.equal(
+  "byCode" in shapeReport.summary,
+  false,
+  "summary must not gain byCode from helper"
+);
+console.log("ok: countFindingsByCode helper");
+
+
+// --quiet suppresses Hints in human output; JSON/SARIF unchanged
+const quietHuman = execSync(`node ${cliPath} --quiet ${samplePathArg}`, {
+  encoding: "utf8",
+});
+assert.ok(quietHuman.includes("Summary:"), "--quiet human still has Summary");
+assert.ok(!quietHuman.includes("Hints:"), "--quiet human omits Hints section");
+const defaultHuman = execSync(`node ${cliPath} ${samplePathArg}`, {
+  encoding: "utf8",
+});
+assert.ok(defaultHuman.includes("Hints:"), "default human still shows Hints");
+const quietJson = JSON.parse(
+  execSync(`node ${cliPath} --quiet --format json ${samplePathArg}`, {
+    encoding: "utf8",
+  })
+);
+const defaultJson = JSON.parse(
+  execSync(`node ${cliPath} --format json ${samplePathArg}`, { encoding: "utf8" })
+);
+assert.deepEqual(quietJson, defaultJson, "--quiet must not change JSON report");
+assert.ok(Array.isArray(quietJson.hints) && quietJson.hints.length > 0);
+const quietReportObj = buildReport(samplePath, good, checkPackage(good));
+assert.ok(
+  formatHuman(quietReportObj, { quiet: true }).includes("Summary:")
+);
+assert.ok(
+  !formatHuman(quietReportObj, { quiet: true }).includes("Hints:")
+);
+assert.equal(runCliExitCode(`--quiet ${samplePathArg}`), 0);
+console.log("ok: --quiet suppresses human hints");
 
 console.log("all selftests passed");
